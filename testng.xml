@@ -1,0 +1,14 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="Salesforce Login Suite">
+  <parameter name="baseUrl" value="${baseUrl}" />
+  <parameter name="username" value="${username}" />
+  <parameter name="password" value="${password}" />
+  <parameter name="invalidUsername" value="${invalidUsername}" />
+  <parameter name="invalidPassword" value="${invalidPassword}" />
+  <test name="LoginTests">
+    <classes>
+      <class name="com.company.tests.ValidLoginTest"/>
+      <class name="com.company.tests.InvalidLoginTest"/>
+    </classes>
+  </test>
+</suite>
