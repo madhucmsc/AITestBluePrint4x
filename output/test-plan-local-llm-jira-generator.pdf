@@ -1,0 +1,558 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R] /Count 5 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 3112 >>
+stream
+BT
+/F1 9 Tf
+50 760 Td
+12 TL
+(Test Plan - Local LLM Jira Test-Case Generator) Tj
+T*
+() Tj
+T*
+(Project: Local LLM Jira Test-Case Generator  ) Tj
+T*
+(Source specification: Chapter_03_Local_LLM_Generator/Finetune_Prompt.md  ) Tj
+T*
+(Prepared: 2026-08-21  ) Tj
+T*
+(Status: Draft - human approval required  ) Tj
+T*
+(Credentials: Not included in this document; use local configuration only.) Tj
+T*
+() Tj
+T*
+(## 1. Scope & Objectives) Tj
+T*
+() Tj
+T*
+(Validate the two-screen Streamlit application that accepts a Jira issue key, retrieves the issue, loads) Tj
+T*
+(a local test-case template, generates a draft with Ollama or Groq, and renders the result in the chat) Tj
+T*
+(screen.) Tj
+T*
+() Tj
+T*
+(### In scope) Tj
+T*
+() Tj
+T*
+(- Chat screen: message input, Send action, progress/error states, and generated output rendering.) Tj
+T*
+(- Settings screen: Jira URL, Jira email, Jira token, provider selection, Groq key, save/load behavior,) Tj
+T*
+(and secret masking.) Tj
+T*
+(- Jira REST integration: issue-key parsing, authentication, response mapping, and error handling.) Tj
+T*
+(- Template loading from the local templates/ directory.) Tj
+T*
+(- LLM routing: Ollama as the default, explicit Groq selection, and Ollama-unavailable fallback to Groq.) Tj
+T*
+(- Configuration persistence and version-control safety.) Tj
+T*
+(- Functional, integration, security, usability, compatibility, reliability, and focused performance) Tj
+T*
+(checks.) Tj
+T*
+() Tj
+T*
+(### Out of scope) Tj
+T*
+() Tj
+T*
+(- Creating or editing Jira issues.) Tj
+T*
+(- Writing test cases or automation for unrelated products.) Tj
+T*
+(- Training or re-downloading an Ollama model.) Tj
+T*
+(- Production-scale availability, multi-user tenancy, or cloud deployment unless later specified.) Tj
+T*
+() Tj
+T*
+(## 2. Requirements Analysis: Gaps & Questions) Tj
+T*
+() Tj
+T*
+(| Requirement area | Status | Finding / question |) Tj
+T*
+(|---|---|---|) Tj
+T*
+(| Core workflow | Present | The required Jira-to-generated-test-case flow is defined. |) Tj
+T*
+(| Screens and deliverables | Present | Two screens and the named modules are specified. |) Tj
+T*
+(| Jira acceptance criteria | Missing | No Jira issue key or ticket body was supplied, so ticket-specific) Tj
+T*
+(scenarios cannot be derived yet. |) Tj
+T*
+(| Input validation | Ambiguous | Define accepted Jira-key format, whitespace behavior, and handling of) Tj
+T*
+(multiple keys in one message. |) Tj
+T*
+(| Jira permissions | Ambiguous | Define required Jira scopes and expected behavior for private, missing,) Tj
+T*
+(or inaccessible issues. |) Tj
+T*
+(| LLM output contract | Ambiguous | Define required fields, format, maximum response size, and behavior) Tj
+T*
+(for malformed or incomplete output. |) Tj
+T*
+(| Ollama fallback | Ambiguous | Define timeout, retry count, and which failures trigger Groq fallback. |) Tj
+T*
+(| Performance | Missing | Define acceptable Jira fetch, first-response, and complete-generation response) Tj
+T*
+(times. |) Tj
+T*
+(| Security | Ambiguous | Confirm encryption or OS-level protection for persisted secrets and whether) Tj
+T*
+(logs may contain request/response content. |) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 4180 >>
+stream
+BT
+/F1 9 Tf
+50 760 Td
+12 TL
+(| Persistence | Ambiguous | Define config-file location, permissions, corruption recovery, and behavior) Tj
+T*
+(when settings are incomplete. |) Tj
+T*
+(| Compatibility | Missing | Confirm supported Python, Streamlit, Windows versions, browsers, and) Tj
+T*
+(viewport sizes. |) Tj
+T*
+(| Rate limits / cost | Missing | Define Jira and Groq rate-limit handling, user messaging, and usage) Tj
+T*
+(controls. |) Tj
+T*
+(| Accessibility / i18n | Missing | Confirm keyboard navigation, labels, contrast, screen-reader) Tj
+T*
+(expectations, and supported locales. |) Tj
+T*
+(| Auditability | Missing | Confirm whether provider choice, request status, and generated drafts require) Tj
+T*
+(local audit logs. |) Tj
+T*
+() Tj
+T*
+(## 3. Test Scenarios) Tj
+T*
+() Tj
+T*
+(Priority meanings: P0 = release-blocking core path or credential exposure risk; P1 = important supported) Tj
+T*
+(behavior; P2 = quality, resilience, or secondary coverage.) Tj
+T*
+() Tj
+T*
+(| ID | Priority | Scenario | Expected result | Traceability |) Tj
+T*
+(|---|---:|---|---|---|) Tj
+T*
+(| TP-001 | P0 | Launch the application with no saved settings. | Chat and Settings screens load; no) Tj
+T*
+(secret is displayed; the user is directed to configure required values. | Prompt: two-screen app;) Tj
+T*
+(settings flow |) Tj
+T*
+(| TP-002 | P0 | Save a valid Jira URL, email, token, Ollama provider, and model defaults. | Settings) Tj
+T*
+(persist, token/key fields remain masked, and a reload restores non-secret configuration without exposing) Tj
+T*
+(secrets. | Prompt: Settings; no hardcoded credentials |) Tj
+T*
+(| TP-003 | P0 | Enter a Jira issue request such as create test cases for QA-102. | The exact Jira key is) Tj
+T*
+(parsed and the request enters the generation workflow. | Prompt: end-to-end flow 1 |) Tj
+T*
+(| TP-004 | P0 | Generate test cases for a valid accessible Jira issue while Ollama is available. | Jira) Tj
+T*
+(summary, description, and acceptance criteria are fetched; the local template is loaded; Ollama) Tj
+T*
+(gemma3:1b is called; structured output appears in chat. | Prompt: end-to-end flow 2-5 |) Tj
+T*
+(| TP-005 | P0 | Inspect source, repository status, and runtime logs after configuring credentials. | No) Tj
+T*
+(Jira token or Groq key is hardcoded, rendered, or written to normal logs; local config is excluded from) Tj
+T*
+(version control. | Prompt: credential guardrail |) Tj
+T*
+(| TP-006 | P0 | Make Ollama unavailable, then submit a valid Jira request with a Groq key configured. |) Tj
+T*
+(The app reports the local-provider failure appropriately, calls Groq as fallback, and renders the) Tj
+T*
+(generated result. | Prompt: mandatory fallback |) Tj
+T*
+(| TP-007 | P1 | Explicitly select Groq and submit a valid Jira request. | Groq is used directly; Ollama) Tj
+T*
+(is not called. | Prompt: explicit provider opt-out |) Tj
+T*
+(| TP-008 | P1 | Submit an unknown, malformed, lowercase, or whitespace-padded issue key. | Input is) Tj
+T*
+(validated consistently, and a clear actionable error appears without an LLM call. | Gap: input) Tj
+T*
+(validation |) Tj
+T*
+(| TP-009 | P1 | Jira returns 401/403, 404, 429, 5xx, timeout, malformed JSON, or an empty description. |) Tj
+T*
+(The app shows a safe, specific error, does not expose credentials, and does not generate from fabricated) Tj
+T*
+(ticket data. | Prompt: fetch details; gaps |) Tj
+T*
+(| TP-010 | P1 | Jira issue has missing, empty, or unusually long acceptance criteria. | The app) Tj
+T*
+(preserves available data, indicates missing content, applies defined size limits, and does not silently) Tj
+T*
+(invent acceptance criteria. | Prompt: acceptance criteria; guardrails |) Tj
+T*
+(| TP-011 | P1 | Template directory is missing, empty, unreadable, or contains invalid template content.) Tj
+T*
+(| A clear configuration error is shown; no partial or misleading test plan is presented. | Prompt: local) Tj
+T*
+(template loading |) Tj
+T*
+(| TP-012 | P1 | Ollama returns timeout, connection refusal, rate limit, malformed output, or a partial) Tj
+T*
+(response. | Defined retry/fallback behavior occurs once; failure is visible and no duplicate) Tj
+T*
+(uncontrolled requests are made. | Prompt: fallback; gap |) Tj
+T*
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 3708 >>
+stream
+BT
+/F1 9 Tf
+50 760 Td
+12 TL
+(| TP-013 | P1 | Groq is selected or reached as fallback without a Groq key. | The app does not make an) Tj
+T*
+(unauthenticated request and explains how to configure the missing key. | Prompt: Settings; security |) Tj
+T*
+(| TP-014 | P1 | Refresh the app, restart Streamlit, and reload after saving settings. | Intended) Tj
+T*
+(settings persist; secrets remain masked; corrupted or missing config fails safely with recovery) Tj
+T*
+(guidance. | Prompt: persist settings |) Tj
+T*
+(| TP-015 | P1 | Send repeated requests and press Send during an active request. | Controls prevent) Tj
+T*
+(accidental duplicate submissions or clearly serialize them; chat history remains coherent. | Gap:) Tj
+T*
+(concurrency / UX |) Tj
+T*
+(| TP-016 | P1 | Verify chat output for prompt injection text inside Jira description or acceptance) Tj
+T*
+(criteria. | Ticket content is treated as untrusted data; system instructions and credential boundaries) Tj
+T*
+(are preserved. | Security risk: external content |) Tj
+T*
+(| TP-017 | P1 | Use keyboard navigation and a screen reader on both screens. | All controls have) Tj
+T*
+(accessible names, logical focus order, visible focus, and usable error messages. | Gap: accessibility |) Tj
+T*
+(| TP-018 | P1 | Use supported desktop browsers and narrow viewport sizes. | Layout remains usable;) Tj
+T*
+(fields and generated output do not overlap or become inaccessible. | Gap: compatibility |) Tj
+T*
+(| TP-019 | P2 | Measure Jira fetch, Ollama/Groq first response, and complete generation time for small) Tj
+T*
+(and large tickets. | Results meet agreed thresholds or show a progress/timeout message. | Gap:) Tj
+T*
+(performance |) Tj
+T*
+(| TP-020 | P2 | Simulate provider recovery after a fallback and submit a later request. | Provider) Tj
+T*
+(routing follows the configured policy and does not remain stuck on Groq unexpectedly. | Gap: reliability) Tj
+T*
+(|) Tj
+T*
+(| TP-021 | P2 | Confirm generated output uses the local template structure and contains no unsupported) Tj
+T*
+(claims. | Output is traceable to Jira content and clearly identifies assumptions or missing) Tj
+T*
+(requirements. | Prompt: template merge; guardrails |) Tj
+T*
+(| TP-022 | P2 | Verify Jira/Groq rate-limit responses and repeated failures. | Backoff/user messaging) Tj
+T*
+(follows agreed policy and avoids uncontrolled API cost. | Gap: rate limiting / cost |) Tj
+T*
+() Tj
+T*
+(## 4. Test Data & Environment) Tj
+T*
+() Tj
+T*
+(### Required test data) Tj
+T*
+() Tj
+T*
+(- One accessible Jira issue with complete summary, description, and acceptance criteria.) Tj
+T*
+(- One issue with missing acceptance criteria.) Tj
+T*
+(- One private/inaccessible issue, one nonexistent issue, and one issue with long content.) Tj
+T*
+(- A valid and an invalid Jira key.) Tj
+T*
+(- A valid test-case template, plus missing and malformed template fixtures.) Tj
+T*
+(- Ollama available at http://localhost:11434 with the existing gemma3:1b model; do not download or) Tj
+T*
+(re-pull it.) Tj
+T*
+(- A dedicated non-production Groq key for explicit-provider and fallback tests.) Tj
+T*
+() Tj
+T*
+(### Environment) Tj
+T*
+() Tj
+T*
+(- Windows developer workstation.) Tj
+T*
+(- Python and dependency versions to be pinned in requirements.txt.) Tj
+T*
+(- Streamlit application run locally.) Tj
+T*
+(- Supported browser matrix to be confirmed by the owner; begin with current Edge and Chrome.) Tj
+T*
+(- Jira credentials supplied through local environment/configuration only. Never place credentials in) Tj
+T*
+(this plan, source files, screenshots, or test evidence.) Tj
+T*
+() Tj
+T*
+(## 5. Test Strategy) Tj
+T*
+() Tj
+T*
+(Execute in this order: configuration smoke tests, Jira integration tests, Ollama happy path, explicit) Tj
+T*
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 2842 >>
+stream
+BT
+/F1 9 Tf
+50 760 Td
+12 TL
+(Groq path, fallback/error paths, security checks, accessibility/compatibility checks, then focused) Tj
+T*
+(performance and exploratory testing.) Tj
+T*
+() Tj
+T*
+(Use equivalence partitioning for provider and input states, boundary-value analysis for ticket/output) Tj
+T*
+(sizes and timeouts, decision tables for provider routing, and state-transition coverage for request) Tj
+T*
+(progress, success, failure, and retry states.) Tj
+T*
+() Tj
+T*
+(Maintain traceability from each confirmed Jira acceptance criterion to one or more scenarios. Until the) Tj
+T*
+(Jira ticket is supplied, TP-001 through TP-022 are specification-based and must be refined against) Tj
+T*
+(actual ticket criteria.) Tj
+T*
+() Tj
+T*
+(## 6. Defect Reporting) Tj
+T*
+() Tj
+T*
+(Log defects in Jira with environment, provider, issue key \(redacted where appropriate\), reproduction) Tj
+T*
+(steps, expected/actual results, severity/priority, screenshots, and sanitized logs. Never attach tokens,) Tj
+T*
+(API keys, authorization headers, or unredacted sensitive ticket content.) Tj
+T*
+() Tj
+T*
+(## 7. Entry & Exit Criteria) Tj
+T*
+() Tj
+T*
+(### Entry) Tj
+T*
+() Tj
+T*
+(- Application modules and template are available.) Tj
+T*
+(- Test environment and supported versions are documented.) Tj
+T*
+(- A non-production Jira issue and safe test credentials are available.) Tj
+T*
+(- Ollama model availability is confirmed.) Tj
+T*
+(- Ticket-specific acceptance criteria have been supplied and reviewed.) Tj
+T*
+() Tj
+T*
+(### Exit) Tj
+T*
+() Tj
+T*
+(- All P0 scenarios pass.) Tj
+T*
+(- No open critical/high security defects or credential exposure.) Tj
+T*
+(- P1 failures are resolved or explicitly accepted by the test owner.) Tj
+T*
+(- Provider routing, persistence, error handling, and regression checks are evidenced.) Tj
+T*
+(- Results and known limitations are recorded.) Tj
+T*
+() Tj
+T*
+(## 8. Risks & Mitigations) Tj
+T*
+() Tj
+T*
+(| Risk | Mitigation |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Exposed Jira token in the shared attachment | Revoke/rotate it immediately; remove it from chat) Tj
+T*
+(history and any captured evidence where possible. |) Tj
+T*
+(| Jira ticket requirements are unknown | Obtain the issue key/body and update traceability before) Tj
+T*
+(sign-off. |) Tj
+T*
+(| LLM output is nondeterministic | Validate structure and required fields; retain sanitized) Tj
+T*
+(prompts/results for repeatability. |) Tj
+T*
+(| Hosted fallback leaks ticket data or incurs cost | Require explicit configuration, show provider) Tj
+T*
+(state, minimize payloads, and test rate limits. |) Tj
+T*
+(| Local config contains secrets | Use restrictive file permissions, masking, .gitignore, and) Tj
+T*
+(secret-scanning checks. |) Tj
+T*
+(| Dependency or browser differences | Pin dependencies and execute the confirmed compatibility matrix. |) Tj
+T*
+() Tj
+T*
+(## 9. Deliverables) Tj
+T*
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 1356 >>
+stream
+BT
+/F1 9 Tf
+50 760 Td
+12 TL
+() Tj
+T*
+(- This draft test plan in Markdown.) Tj
+T*
+(- PDF export of this draft.) Tj
+T*
+(- Scenario execution evidence and sanitized defect reports after implementation.) Tj
+T*
+(- Updated requirement-to-scenario traceability after the Jira ticket is identified.) Tj
+T*
+() Tj
+T*
+(---- HUMAN REVIEW GATE ----) Tj
+T*
+() Tj
+T*
+(Assumptions made: The requested scope is the application described in Finetune_Prompt.md, not a specific) Tj
+T*
+(Jira feature. The app is local/internal, Ollama is the default provider, and Groq is only explicit or) Tj
+T*
+(fallback use.) Tj
+T*
+() Tj
+T*
+(Cannot confirm yet: Jira issue key and acceptance criteria; supported Python/Streamlit/browser versions;) Tj
+T*
+(response-time targets; fallback timeout/retry policy; persisted-secret protection; accessibility,) Tj
+T*
+(localization, rate-limit, and audit requirements.) Tj
+T*
+() Tj
+T*
+(Approval required: A tester or product owner must provide the Jira issue key or ticket body, answer the) Tj
+T*
+(open questions, and approve or edit this draft before it is treated as an approved plan or used to) Tj
+T*
+(create test cases/automation.) Tj
+T*
+() Tj
+T*
+(Security action: The Jira API token included in the conversation is a credential exposure. Revoke it in) Tj
+T*
+(Atlassian and create a replacement before any integration testing.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000141 00000 n 
+0000000211 00000 n 
+0000000337 00000 n 
+0000003501 00000 n 
+0000003627 00000 n 
+0000007859 00000 n 
+0000007985 00000 n 
+0000011745 00000 n 
+0000011873 00000 n 
+0000014768 00000 n 
+0000014896 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R >>
+startxref
+16305
+%%EOF
