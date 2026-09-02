@@ -1,0 +1,105 @@
+{
+  "name": "Gmail - Scehdule Email",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Trigger",
+        "height": 256,
+        "width": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -288,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "bc4a291e-ef12-458c-a28e-a07ca80300b5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Action",
+        "height": 288,
+        "width": 272,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        48,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "1566575a-9ed0-4739-986c-02c2673aec6a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "e2f9c867-10ab-4f71-9dac-876848b3e689",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "madhucmsc.21@gmail.com",
+        "subject": "N8N workflow email",
+        "message": "Scheduled email please ignore",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        -16
+      ],
+      "id": "6cb819d5-d732-4f3e-a535-4385f53ca715",
+      "name": "Send a message",
+      "webhookId": "eeeb3659-59b7-4c35-b1ae-d854e29a47f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "igGAdoXDzOcfsMyz",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0215246b-3d56-4f54-bc9f-d6f06becdc1a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c89845b2e585e9aa3e8b5b656b73fa2833ed1770c35abbe6085c7ac0919a0ab8"
+  },
+  "nodeGroups": [],
+  "id": "8SjIxObjiM7yHm3O",
+  "tags": []
+}
