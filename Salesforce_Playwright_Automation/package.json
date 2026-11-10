@@ -1,0 +1,22 @@
+{
+  "name": "salesforce-playwright-automation",
+  "version": "1.0.0",
+  "description": "Playwright (TypeScript) automation flow for the Salesforce Lightning Person Account scenario (Tosca test case port).",
+  "private": true,
+  "scripts": {
+    "test": "playwright test --project=chromium",
+    "test:headed": "cross-env HEADLESS=false playwright test --project=chromium",
+    "test:chrome": "cross-env HEADLESS=false playwright test --project=\"Google Chrome\"",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen https://dko000000skbiuag.lightning.force.com/one/one.app",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^20.14.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.4"
+  }
+}

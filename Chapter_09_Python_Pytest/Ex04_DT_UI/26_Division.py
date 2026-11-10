@@ -1,0 +1,6 @@
+num1=input("Enter first number: ")
+num2=input("Enter second number: ")
+division=int(num1)/int(num2)
+print(division)
+quotient=int(num1)//int(num2)
+print(quotient)

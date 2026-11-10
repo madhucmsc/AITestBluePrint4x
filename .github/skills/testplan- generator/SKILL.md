@@ -73,3 +73,10 @@ Assumptions made / Open questions / "Approve or edit before I continue"
 - Never mark the plan "final" – a human owns sign-off.
 - Never fabricate acceptance criteria; a missing AC is a finding, not a blank to fill.
 - Keep scenarios traceable: each maps to an AC or a gap.
+
+
+## References
+- `references/requirement-checklist.md` — the gap-analysis checklist
+- `references/testplan-template.md` — the plan template to fill
+- `scripts/fetch-jira.sh` — pull a ticket over the JIRA REST API
+- `copilot/test-plan.prompt.md` — the same skill as a GitHub Copilot prompt file

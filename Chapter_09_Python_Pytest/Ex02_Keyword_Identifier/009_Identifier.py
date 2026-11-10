@@ -1,0 +1,2 @@
+long_var_name_bool_nhu_uyt="hello"
+print(long_var_name_bool_nhu_uyt)

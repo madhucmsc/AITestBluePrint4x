@@ -1,0 +1,299 @@
+{
+  "name": "09_Requirement_To_Testcase_AIAgent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Requirement → Test Case Converter (Jira)\n\nWatches Jira and, whenever a story's **summary or description changes** (or it is created), generates positive / negative / edge BDD scenarios with a cheap model and posts them back as a **Gherkin comment** on the same story.\n\n### Setup\n1. Attach a **Jira SW Cloud** credential to the `Jira Trigger` and `Jira - Comment Test Cases` nodes.\n2. Attach a **Google Gemini** credential to `Google Gemini Chat Model`.\n3. Activate the workflow (this registers the Jira webhook automatically).\n\n### How to test\nCreate or edit a Jira story — the comment appears within a few seconds. Toggle the workflow **inactive** while editing to pause it.\n\n### Loop / spam protection\nOnly `description` and `summary` changes re-trigger (see `WATCHED_FIELDS` in `Extract Requirement`), so the workflow's own comment can never re-trigger it. Add a **JQL Filter** in the trigger's Additional Fields to scope it to one project or issue type.",
+        "height": 660,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        -420
+      ],
+      "id": "d2e3f4a5-0001-4000-8000-000000000001",
+      "name": "Sticky Note - Setup"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "cloud",
+        "events": [
+          "jira:issue_created",
+          "jira:issue_updated"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.jiraTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -660,
+        0
+      ],
+      "id": "d2e3f4a5-0002-4000-8000-000000000002",
+      "name": "Jira Trigger",
+      "webhookId": "d2e3f4a5-0002-4000-8000-0000000000aa",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "tD4mPsun3tbyiJvK",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Regenerate the test-case comment only when one of these Jira fields changes.\nconst WATCHED_FIELDS = ['description', 'summary'];\n\n// The Jira trigger emits the raw Atlassian payload at $json; some builds nest it under `body`.\nconst entry = $input.first().json || {};\nconst payload = entry.body && entry.body.issue ? entry.body : entry;\n\nconst issue = payload.issue || {};\nconst fields = issue.fields || {};\nconst changedFields = ((payload.changelog && payload.changelog.items) || []).map((i) => i.field);\nconst webhookEvent = payload.webhookEvent || '';\n\n// Loop guard: act on creation, or only when the requirement text itself changed.\n// Our own comment is never in WATCHED_FIELDS, so it cannot re-trigger the flow.\nconst requirementChanged = changedFields.some((f) => WATCHED_FIELDS.includes(f));\nconst shouldGenerate = webhookEvent === 'jira:issue_created' || requirementChanged;\n\n// Jira Cloud sends descriptions as Atlassian Document Format; Jira Server sends plain text.\nfunction adfToText(node) {\n  if (!node) return '';\n  if (typeof node === 'string') return node;\n  if (Array.isArray(node)) return node.map(adfToText).join('');\n\n  switch (node.type) {\n    case 'text':\n      return node.text || '';\n    case 'hardBreak':\n      return '\\n';\n    case 'paragraph':\n    case 'heading':\n    case 'codeBlock':\n      return (node.content ? node.content.map(adfToText).join('') : '') + '\\n';\n    case 'listItem':\n      return '- ' + (node.content ? node.content.map(adfToText).join('').trim() : '') + '\\n';\n    case 'tableRow':\n      return (node.content ? node.content.map(adfToText).join(' | ').trim() : '') + '\\n';\n    default:\n      return node.content ? node.content.map(adfToText).join('') : '';\n  }\n}\n\nconst rawDescription = fields.description;\nlet requirementText = '';\nif (rawDescription && typeof rawDescription === 'object') {\n  requirementText = adfToText(rawDescription).replace(/\\n{3,}/g, '\\n\\n').trim();\n} else if (typeof rawDescription === 'string') {\n  requirementText = rawDescription.trim();\n}\n\nconst summary = fields.summary || '';\n\nreturn [{\n  json: {\n    should_generate: shouldGenerate && (requirementText.length > 0 || summary.length > 0),\n    ticket_key: issue.key || '',\n    summary: summary,\n    requirement_text: requirementText,\n    issue_type: (fields.issuetype && fields.issuetype.name) || ''\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "d2e3f4a5-0003-4000-8000-000000000003",
+      "name": "Extract Requirement"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d2e3f4a5-0004-4000-8000-000000000004",
+              "leftValue": "={{ $json.should_generate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -140,
+        0
+      ],
+      "id": "d2e3f4a5-0005-4000-8000-000000000005",
+      "name": "IF - Requirement Changed?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate BDD/Gherkin test cases for this Jira requirement.\n\nJira key: {{ $json.ticket_key || 'n/a' }}\nIssue type: {{ $json.issue_type || 'n/a' }}\nSummary: {{ $json.summary || 'n/a' }}\n\nRequirement description:\n{{ $json.requirement_text || 'not provided' }}\n\nCover positive (happy path), negative (invalid / error handling) and edge (boundary / unusual) scenarios.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a senior QA engineer who writes crisp BDD test cases.\n\nRules:\n1. Cover the happy path (positive), failure/validation paths (negative), and boundary or unusual conditions (edge).\n2. Output bare step text WITHOUT the Gherkin keywords — do not start a step with 'Given', 'When', 'Then' or 'And'. The keywords are added downstream.\n3. 'given' = preconditions/state. 'when' = the single action under test. 'then' = observable, assertable outcomes. Use one array entry per step.\n4. Write only what the requirement supports. Never invent business rules; if something is ambiguous, record it under 'assumptions' instead of asserting it.\n5. Mark every test case as exactly one of: positive, negative, edge.\n6. 'id' should be a short stable code like TC-001, TC-002 in order.\n7. Prefer specific, testable values (lengths, limits, messages) over vague wording."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        140,
+        0
+      ],
+      "id": "d2e3f4a5-0006-4000-8000-000000000006",
+      "name": "AI Agent - Test Case Designer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-2.5-flash-lite",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        100,
+        260
+      ],
+      "id": "d2e3f4a5-0007-4000-8000-000000000007",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"feature_name\": {\n      \"type\": \"string\",\n      \"description\": \"Name of the feature under test\"\n    },\n    \"feature_description\": {\n      \"type\": \"string\",\n      \"description\": \"One or two sentences describing the feature\"\n    },\n    \"assumptions\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"description\": \"Ambiguities or preconditions assumed from the requirement\"\n    },\n    \"test_cases\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": { \"type\": \"string\" },\n          \"title\": { \"type\": \"string\" },\n          \"category\": {\n            \"type\": \"string\",\n            \"enum\": [\"positive\", \"negative\", \"edge\"]\n          },\n          \"priority\": {\n            \"type\": \"string\",\n            \"enum\": [\"High\", \"Medium\", \"Low\"]\n          },\n          \"tags\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"given\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"when\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"then\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          }\n        },\n        \"required\": [\"title\", \"category\", \"given\", \"when\", \"then\"]\n      }\n    }\n  },\n  \"required\": [\"feature_name\", \"test_cases\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        260
+      ],
+      "id": "d2e3f4a5-0008-4000-8000-000000000008",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Jira metadata comes from the Extract node (the AI Agent replaces $json with the model output).\nconst meta = $('Extract Requirement').first().json || {};\nconst ticketKey = meta.ticket_key || '';\nconst summary = meta.summary || '';\n\nconst toArray = (v) => (Array.isArray(v) ? v.map(String) : v ? [String(v)] : []);\nconst slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const raw = item.json || {};\n\n  // Structured output may arrive directly, or nested under `output` (possibly as a JSON string).\n  let data = raw.output !== undefined ? raw.output : raw;\n  if (typeof data === 'string') {\n    try {\n      data = JSON.parse(data);\n    } catch (e) {\n      data = {};\n    }\n  }\n  if (!data || typeof data !== 'object') {\n    data = {};\n  }\n\n  const featureName = data.feature_name || summary || ticketKey || 'Requirement';\n  const description = data.feature_description || '';\n  const assumptions = toArray(data.assumptions);\n\n  let cases = Array.isArray(data.test_cases) ? data.test_cases : [];\n  if (cases.length === 0) {\n    cases = [{\n      id: 'TC-001',\n      title: 'Requirement could not be parsed into scenarios',\n      category: 'edge',\n      priority: 'High',\n      tags: ['needs-review'],\n      given: ['a requirement was supplied'],\n      when: ['test cases are generated'],\n      then: ['no scenarios were produced', 'the requirement needs clarification']\n    }];\n  }\n\n  const counts = { total: cases.length, positive: 0, negative: 0, edge: 0 };\n  const lines = [];\n\n  if (ticketKey) lines.push('@' + String(ticketKey).replace(/\\s+/g, '_'));\n  lines.push('Feature: ' + featureName);\n  if (description) lines.push('  ' + description);\n  lines.push('');\n\n  if (assumptions.length) {\n    lines.push('  Background:');\n    assumptions.forEach((a, i) => lines.push('    ' + (i === 0 ? 'Given' : 'And') + ' ' + a));\n    lines.push('');\n  }\n\n  cases.forEach((tc, index) => {\n    const category = ['positive', 'negative', 'edge'].includes(tc.category) ? tc.category : 'edge';\n    counts[category] += 1;\n\n    const id = tc.id || 'TC-' + String(index + 1).padStart(3, '0');\n    const tags = toArray(tc.tags).map((t) => t.replace(/[^A-Za-z0-9_-]+/g, '_'));\n    const tagLine = ['@' + category].concat(tags.map((t) => '@' + t)).join(' ');\n    lines.push('  ' + tagLine);\n    lines.push('  Scenario: ' + id + ' - ' + (tc.title || 'Untitled scenario'));\n\n    toArray(tc.given).forEach((g, i) => lines.push('    ' + (i === 0 ? 'Given' : 'And') + ' ' + g));\n    toArray(tc.when).forEach((w, i) => lines.push('    ' + (i === 0 ? 'When' : 'And') + ' ' + w));\n    toArray(tc.then).forEach((t, i) => lines.push('    ' + (i === 0 ? 'Then' : 'And') + ' ' + t));\n    lines.push('');\n  });\n\n  const gherkin = lines.join('\\n').replace(/\\n{3,}/g, '\\n\\n').trim() + '\\n';\n  const fileName = (slug(featureName) || 'requirement') + '.feature';\n\n  // Atlassian Document Format: the Jira node sends this as the comment body,\n  // rendering the Gherkin as a proper code block on the story.\n  const commentAdf = {\n    type: 'doc',\n    version: 1,\n    content: [\n      {\n        type: 'paragraph',\n        content: [\n          { type: 'text', text: 'AI-generated BDD test cases', marks: [{ type: 'strong' }] },\n          {\n            type: 'text',\n            text: ' for ' + (ticketKey || 'this story') + ' \\u2014 ' + counts.total + ' scenarios (positive ' + counts.positive + ', negative ' + counts.negative + ', edge ' + counts.edge + ').'\n          }\n        ]\n      },\n      {\n        type: 'codeBlock',\n        attrs: { language: 'gherkin' },\n        content: [{ type: 'text', text: gherkin }]\n      }\n    ]\n  };\n\n  results.push({\n    json: {\n      ticket_key: ticketKey,\n      feature_name: featureName,\n      file_name: fileName,\n      counts: counts,\n      gherkin: gherkin,\n      comment_adf: commentAdf\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "id": "d2e3f4a5-0009-4000-8000-000000000009",
+      "name": "Build Gherkin & Comment"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "cloud",
+        "resource": "issueComment",
+        "operation": "add",
+        "issueKey": "={{ $json.ticket_key }}",
+        "jsonParameters": true,
+        "commentJson": "={{ JSON.stringify($json.comment_adf) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "d2e3f4a5-0010-4000-8000-000000000010",
+      "name": "Jira - Comment Test Cases",
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "tD4mPsun3tbyiJvK",
+          "name": "Jira SW Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Model note\n`gemini-2.5-flash-lite` handles this text-only task for ~$0.10 per million input tokens.\n\n### Tuning the guard\nEdit `WATCHED_FIELDS` in `Extract Requirement` to change what counts as a requirement change. To scope to a project or issue type, add a **JQL Filter** (e.g. `project = QA AND issuetype = Story`) in the Jira Trigger's Additional Fields.\n\n### Prefer separate issues instead of a comment?\nReplace `Jira - Comment Test Cases` with *Jira → Issue: Create*, split `{{ $json.test_case_rows }}` one item per scenario, and set the Project / Issue Type dropdowns. Keep the comment for a lightweight, non-polluting history.",
+        "height": 320,
+        "width": 460,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        100,
+        400
+      ],
+      "id": "d2e3f4a5-0011-4000-8000-000000000011",
+      "name": "Sticky Note - Model & Tuning"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Jira Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Requirement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Requirement": {
+      "main": [
+        [
+          {
+            "node": "IF - Requirement Changed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Requirement Changed?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Test Case Designer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Test Case Designer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - Test Case Designer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Test Case Designer": {
+      "main": [
+        [
+          {
+            "node": "Build Gherkin & Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Gherkin & Comment": {
+      "main": [
+        [
+          {
+            "node": "Jira - Comment Test Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d2e3f4a5-0012-4000-8000-000000000012",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "id": "RequirementToTestcaseJira09",
+  "tags": []
+}

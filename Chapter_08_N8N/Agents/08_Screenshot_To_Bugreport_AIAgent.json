@@ -1,0 +1,224 @@
+{
+  "name": "08_Screenshot_To_Bugreport_AIAgent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Screenshot → Bug Reporter\n\n**POST** a UI screenshot to the webhook. A cheap vision model (Gemini 2.5 Flash-Lite) reads it, drafts a structured bug report, and a GitHub Issue is created automatically.\n\n### Setup\n1. Attach a **Google Gemini** credential to `Google Gemini Chat Model`.\n2. Attach a **GitHub** credential to `GitHub - Create Bug Issue`.\n3. Activate the workflow and copy the production webhook URL.\n\n### Test call\n```bash\ncurl -X POST <N8N_URL>/webhook/screenshot-bug-reporter \\\n  -F \"data=@screenshot.png\" \\\n  -F \"repo_owner=my-org\" \\\n  -F \"repo_name=my-project\" \\\n  -F \"environment=Chrome 128 / Windows 11\" \\\n  -F \"error_log=Uncaught TypeError: x is not a function\"\n```\nThe file field **must be named `data`** (binary property the Agent reads).",
+        "height": 620,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        -320
+      ],
+      "id": "b0c1d2e3-0001-4000-8000-000000000001",
+      "name": "Sticky Note - Setup"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "screenshot-bug-reporter",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "b0c1d2e3-0002-4000-8000-000000000002",
+      "name": "Webhook - Screenshot Upload",
+      "webhookId": "b0c1d2e3-0002-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Draft a bug report from the attached screenshot.\n\nExtra context supplied with the upload:\n- Environment: {{ ($json.body && $json.body.environment) || $json.environment || 'not provided' }}\n- Error log / console output:\n{{ ($json.body && $json.body.error_log) || $json.error_log || 'not provided' }}\n\nAnalyze the image and return the structured bug report.",
+        "hasOutputParser": true,
+        "options": {
+          "passthroughBinaryImages": true,
+          "systemMessage": "You are a senior QA engineer. Analyze the attached UI screenshot and produce a precise, reproducible bug report.\n\nRules:\n1. Report only what is visible in the screenshot or directly implied by the supplied error log. Never invent URLs, versions, timestamps, or steps.\n2. steps_to_reproduce must be concrete, numbered actions a tester can follow.\n3. severity: Critical = crash / data loss / fully blocking. High = core flow broken, no workaround. Medium = feature misbehaves but a workaround exists. Low = cosmetic or minor.\n4. visual_details must describe the exact on-screen evidence: error text, wrong values, broken layout, the affected element.\n5. If the environment was not supplied, infer it from the screenshot (browser chrome, OS window frame, app UI).\n6. If an error log was supplied, fold the relevant lines into actual_result and visual_details."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "b0c1d2e3-0003-4000-8000-000000000003",
+      "name": "AI Agent - Bug Analyst"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-2.5-flash-lite",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        240
+      ],
+      "id": "b0c1d2e3-0004-4000-8000-000000000004",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"bug_title\": {\n      \"type\": \"string\",\n      \"description\": \"Short, specific bug title (max 90 chars)\"\n    },\n    \"severity\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Critical\",\n        \"High\",\n        \"Medium\",\n        \"Low\"\n      ]\n    },\n    \"summary\": {\n      \"type\": \"string\",\n      \"description\": \"One or two sentences describing the bug\"\n    },\n    \"steps_to_reproduce\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Concrete numbered actions a tester can follow\"\n    },\n    \"expected_result\": {\n      \"type\": \"string\"\n    },\n    \"actual_result\": {\n      \"type\": \"string\"\n    },\n    \"visual_details\": {\n      \"type\": \"string\",\n      \"description\": \"Exact on-screen evidence visible in the screenshot\"\n    },\n    \"environment\": {\n      \"type\": \"string\"\n    },\n    \"labels\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Optional extra labels, e.g. ui, regression, login\"\n    }\n  },\n  \"required\": [\n    \"bug_title\",\n    \"severity\",\n    \"summary\",\n    \"steps_to_reproduce\",\n    \"actual_result\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        240
+      ],
+      "id": "b0c1d2e3-0005-4000-8000-000000000005",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Pull the request metadata straight from the webhook item (survives the AI Agent node).\nconst uploadItem = $('Webhook - Screenshot Upload').first().json || {};\nconst body = uploadItem.body || uploadItem;\n\nconst repoOwner = body.repo_owner || body.repoOwner || 'REPLACE_WITH_GITHUB_OWNER';\nconst repoName = body.repo_name || body.repoName || 'REPLACE_WITH_GITHUB_REPO';\nconst fallbackEnvironment = body.environment || 'Not provided';\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const raw = item.json || {};\n\n  // The Agent may return the parsed object directly, or nested under `output` (possibly as a string).\n  let bug = raw.output !== undefined ? raw.output : raw;\n  if (typeof bug === 'string') {\n    try {\n      bug = JSON.parse(bug);\n    } catch (e) {\n      bug = { summary: bug };\n    }\n  }\n  if (!bug || typeof bug !== 'object') {\n    bug = {};\n  }\n\n  const severity = String(bug.severity || 'Medium');\n\n  let steps = bug.steps_to_reproduce;\n  if (!Array.isArray(steps)) {\n    steps = steps ? [String(steps)] : [];\n  }\n  if (steps.length === 0) {\n    steps = ['Not determinable from the supplied screenshot.'];\n  }\n\n  const labels = Array.isArray(bug.labels) ? bug.labels.map(String) : [];\n  if (!labels.includes('bug')) labels.push('bug');\n  const severityLabel = 'severity:' + severity.toLowerCase().replace(/\\s+/g, '-');\n  if (!labels.includes(severityLabel)) labels.push(severityLabel);\n\n  const baseTitle = bug.bug_title || bug.summary || 'Bug reported from screenshot';\n  const issueTitle = ('[Bug] ' + baseTitle + ' — ' + severity).slice(0, 250);\n\n  const issueBody = [\n    '### Summary',\n    bug.summary || '_No summary produced._',\n    '',\n    '### Steps to Reproduce',\n    ...steps.map((step, i) => `${i + 1}. ${step}`),\n    '',\n    '### Expected Result',\n    bug.expected_result || '_Not specified._',\n    '',\n    '### Actual Result',\n    bug.actual_result || '_Not specified._',\n    '',\n    '### Visual Details',\n    bug.visual_details || '_None reported._',\n    '',\n    '### Environment',\n    bug.environment || fallbackEnvironment,\n    '',\n    '---',\n    '_Reported automatically by the Screenshot-to-Bug-Reporter agent (Gemini 2.5 Flash-Lite vision analysis)._'\n  ].join('\\n');\n\n  results.push({\n    json: {\n      repo_owner: repoOwner,\n      repo_name: repoName,\n      issue_title: issueTitle,\n      issue_body: issueBody,\n      labels: labels,\n      labels_csv: labels.join(','),\n      severity: severity\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "b0c1d2e3-0006-4000-8000-000000000006",
+      "name": "Build Bug Report"
+    },
+    {
+      "parameters": {
+        "resource": "issue",
+        "operation": "create",
+        "owner": "={{ $json.repo_owner }}",
+        "repository": "={{ $json.repo_name }}",
+        "title": "={{ $json.issue_title }}",
+        "body": "={{ $json.issue_body }}",
+        "labels": "={{ $json.labels_csv }}"
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        0
+      ],
+      "id": "b0c1d2e3-0007-4000-8000-000000000007",
+      "name": "GitHub - Create Bug Issue",
+      "credentials": {
+        "githubApi": {
+          "id": "REPLACE_WITH_GITHUB_CREDENTIAL_ID",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Model note\n`gemini-2.5-flash-lite` is the cheapest hosted vision option (~258 tokens per 1024×1024 image).\n\n**Fallback:** delete the Gemini node and wire in an `OpenAI Chat Model` (`gpt-5-mini`) instead — no other changes needed.",
+        "height": 180,
+        "width": 380,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "b0c1d2e3-0008-4000-8000-000000000008",
+      "name": "Sticky Note - Model"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Screenshot Upload": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Bug Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Bug Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - Bug Analyst",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Bug Analyst": {
+      "main": [
+        [
+          {
+            "node": "Build Bug Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Bug Report": {
+      "main": [
+        [
+          {
+            "node": "GitHub - Create Bug Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b0c1d2e3-0009-4000-8000-000000000009",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "id": "ScreenshotToBugReport08",
+  "tags": []
+}

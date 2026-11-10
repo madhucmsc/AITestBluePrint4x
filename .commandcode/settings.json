@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(C:\\Users\\prava\\AppData\\Local\\Python\\pythoncore-3.14-64\\Scripts\\langflow.exe:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

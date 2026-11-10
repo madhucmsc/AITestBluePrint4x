@@ -1,0 +1,19 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="Salesforce Login Suite" parallel="tests" thread-count="2">
+  <test name="ValidLoginTest">
+    <parameter name="baseUrl" value="${baseUrl}" />
+    <parameter name="username" value="${username}" />
+    <parameter name="password" value="${password}" />
+    <classes>
+      <class name="com.company.tests.ValidLoginTest" />
+    </classes>
+  </test>
+  <test name="InvalidLoginTest">
+    <parameter name="baseUrl" value="${baseUrl}" />
+    <parameter name="invalidUsername" value="${invalidUsername}" />
+    <parameter name="invalidPassword" value="${invalidPassword}" />
+    <classes>
+      <class name="com.company.tests.InvalidLoginTest" />
+    </classes>
+  </test>
+</suite>
