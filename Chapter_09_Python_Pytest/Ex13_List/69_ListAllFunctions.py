@@ -1,0 +1,16 @@
+my_list=[1,2,3,4]
+print("element at index 0:",my_list[0])
+print("element at index 1:",my_list[1])
+print("element at index 2:",my_list[2])
+print("element at index 3:",my_list[3])
+my_list.append("Ram")
+print("After appending:",my_list)
+
+my_list.extend(["Sita","Laxman"])
+print("After extending:",my_list)
+my_list.insert(1,"Hanuman")
+print("After inserting:",my_list)
+my_list.remove(2)
+print("After removing:",my_list)
+my_list.pop(2)
+print("After popping:",my_list)
